@@ -1,7 +1,9 @@
+import os
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+import gdown
 
 st.set_page_config(
     page_title="Clothing Image Classification",
@@ -15,11 +17,27 @@ st.write(
     "will predict its clothing category."
 )
 
+MODEL_PATH = "dropout_model_deploy.keras"
+
+GOOGLE_DRIVE_FILE_ID = "15kuE-xgBjzNbfWFLjGQX427ktbvcyJtE"
+
+
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("dropout_model.keras")
+
+    if not os.path.exists(MODEL_PATH):
+
+        gdown.download(
+            id=GOOGLE_DRIVE_FILE_ID,
+            output=MODEL_PATH,
+            quiet=False
+        )
+
+    return tf.keras.models.load_model(MODEL_PATH)
+
 
 model = load_model()
+
 
 class_names = [
     "dress",
@@ -34,10 +52,12 @@ class_names = [
     "t-shirt"
 ]
 
+
 uploaded_file = st.file_uploader(
     "Choose a clothing image",
     type=["jpg", "jpeg", "png"]
 )
+
 
 if uploaded_file is not None:
 
@@ -46,34 +66,38 @@ if uploaded_file is not None:
     st.subheader("Uploaded Image")
     st.image(image, width=300)
 
-    # Preprocessing
     image = image.resize((128, 128))
 
     image_array = np.array(image)
     image_array = image_array / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
-    # Prediction
     predictions = model.predict(image_array)
+
     probabilities = predictions[0]
 
-    # Top 3 predictions
     top_3_indices = np.argsort(probabilities)[-3:][::-1]
 
     predicted_index = top_3_indices[0]
+
     predicted_class = class_names[predicted_index]
+
     confidence = probabilities[predicted_index] * 100
 
     st.subheader("Prediction")
 
-    st.success(f"Predicted Class: {predicted_class}")
+    st.success(
+        f"Predicted Class: {predicted_class}"
+    )
 
     st.write("Prediction Confidence")
+
     st.write(f"### {confidence:.2f}%")
 
     st.subheader("Top-3 Predictions")
 
     for rank, index in enumerate(top_3_indices, start=1):
+
         probability = probabilities[index]
 
         st.write(
